@@ -7,7 +7,9 @@ public class GridManager : MonoBehaviour
 	public int Columns = 8;
 	public int Rows = 6;
 
+    public GameObject ShipPrefab;
 	public ShipDefinition ShipDefinition;
+    public ColorLibrary ColorLib;
 	public Vector3 SpawnOffset;
 
 	private GridSpace[,] mGrid;
@@ -36,6 +38,7 @@ public class GridManager : MonoBehaviour
 
 		mSpawnedShips = new List<Ship>();
 
+        //generate grid
 		for (int y = 0; y < Rows; ++y)
 		{
 			for (int x = 0; x < Columns; ++x)
@@ -48,6 +51,18 @@ public class GridManager : MonoBehaviour
 				space.Grid = this;
 			}
 		}
+
+        //link grid
+        for (int y = 0; y < Rows; ++y)
+        {
+            for (int x = 0; x < Columns; ++x)
+            {
+                mGrid[x, y].ForwardSpace = y > 0 ? mGrid[x, y - 1] : null;
+                mGrid[x, y].BackSpace = y < Rows - 1 ? mGrid[x, y + 1] : null;
+                mGrid[x, y].LeftSpace = x > 0 ? mGrid[x - 1, y] : null;
+                mGrid[x, y].RightSpace = x < Columns - 1 ? mGrid[x + 1, y] : null;                
+            }
+        }
 
 		_SpawnReinforcements();
 	}
@@ -73,10 +88,10 @@ public class GridManager : MonoBehaviour
 				--spawnRow;
 
 			GridSpace spawnSpace = mGrid[spawnCol, spawnRow];
-			spawnSpace.Occupied = true;
-			spawnSpace.Ship.SpritePos = Vector3.zero;
-			spawnSpace.Ship.Graphic.transform.localPosition = SpawnOffset;
-			spawnSpace.Ship.SetShip(ShipDefinition, Random.Range(0, 3));
+
+            GameObject so = Instantiate<GameObject>(ShipPrefab);
+            so.transform.SetParent(transform, false);
+            so.GetComponent<Ship>().SetShip(ShipDefinition, ColorLib, Random.Range(0, 3), spawnSpace, SpawnOffset);
 
 			mSpawnedShips.Add(spawnSpace.Ship);
 

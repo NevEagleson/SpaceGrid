@@ -3,94 +3,152 @@ using System.Collections;
 
 public class Ship : MonoBehaviour 
 {
+    public enum ShipState
+    {
+        Normal,
+        Attacking,
+        Defending,
+        Combining
+    }
+
+    [Header("Stats")]
 	public int Attack;
 	public int Defense;
 	public int Color;
 	public int Multiplier;
-	public ShipState State;
-	public int AttackTurns;
-	public GameObject Graphic;
-	[SerializeField]
-	public ColorLibrary ColorLib;
-	[SerializeField]
-	private SpriteRenderer ColorSprite;
-	[SerializeField]
-	private SpriteRenderer Sprite;
-	public Animator Animator;
+    public int AttackTurns;
+    public float MoveSpeed;
 
-	public Vector3 SpritePos;
+	[Header("Scene Links")]
+    [SerializeField]
+    private SpriteRenderer ColorSprite;
+    [SerializeField]
+    private SpriteRenderer Sprite;
+    [SerializeField]
+    private Animator Animator;
+	
+    private ShipState mState;
+    private ShipDefinition mDefinition;
+    private ColorLibrary mColorLib;
+    //this is the top left space the ship occupies
+    private GridSpace mCurrentSpace;
+    //offset of ship transform from gridspace
+    private Vector3 mOffset;
+    //animation
+    private bool mMoving;
+    private bool Moving
+    {
+        get { return mMoving; }
+        set
+        {
+            mMoving = value;
+            Animator.SetBool("Moving", value);
+        }
+    }
 
-	public ShipDefinition Definition;
+    void OnEnable()
+    {
+        //because we spawn offscreen so need to move to space
+        Moving = true;
+    }
 
-	public float MoveSpeed;
-
-	private bool mMoving;
-
-	public void OnEnable()
+	void Update()
 	{
-		Reset();
+        if (mDefinition == null || mCurrentSpace == null) return;
+
+        if (Moving)
+        {
+            Vector3 deltaPos = mCurrentSpace.transform.position - transform.position - mOffset;
+            deltaPos.z = 0;
+            float sqrMoveDist = MoveSpeed * Time.deltaTime;
+            sqrMoveDist *= sqrMoveDist;
+            if (deltaPos.sqrMagnitude > sqrMoveDist)
+            {
+                deltaPos.Normalize();
+                deltaPos *= MoveSpeed * Time.deltaTime;
+                transform.Translate(deltaPos);
+            }
+            else
+            {
+                transform.position = mCurrentSpace.transform.position + mOffset;
+                Moving = false;
+
+                if (mState == ShipState.Combining)
+                    Destroy(gameObject);
+            }
+        }
 	}
 
-	public void Update()
+	public void SetShip(ShipDefinition def, ColorLibrary colorLib, int color, GridSpace space, Vector3 offset)
 	{
-		Vector3 deltaPos = SpritePos - Graphic.transform.localPosition;
-		deltaPos.z = 0;
-		float sqrMoveDist = MoveSpeed * Time.deltaTime;
-		sqrMoveDist *= sqrMoveDist;
-		if (deltaPos.sqrMagnitude > sqrMoveDist)
-		{
-			if (!mMoving)
-			{
-				Animator.SetBool("Moving", true);
-				mMoving = true;
-			}
-			deltaPos.Normalize();
-			deltaPos *= MoveSpeed * Time.deltaTime;
-			Graphic.transform.Translate(deltaPos);
-		}
-		else if(mMoving)
-		{
-			Graphic.transform.localPosition = SpritePos;
-			Animator.SetBool("Moving", false);
-			mMoving = false;
-		}
-	}
-
-	public void Reset()
-	{
-		State = ShipState.Empty;
-		Multiplier = 0;
-		Attack = 0;
-		Defense = 0;
-		Definition = null;
-		Sprite.sprite = null;
-		ColorSprite.sprite = null;
-		Animator.SetBool("Attacking", false);
-		Animator.SetBool("Defending", false);
-		Animator.SetBool("Moving", false);
-		SpritePos = Vector3.zero;
-		Graphic.transform.localPosition = Vector3.zero;
-	}
-
-	public void SetShip(ShipDefinition def, int color)
-	{
-		Definition = def;
+		mDefinition = def;
+        mColorLib = colorLib;
+        UpdateLocation(space);
 		Color = color;
 
-		Attack = Definition.Attack;
-		Defense = Definition.Defense;
+		Attack = mDefinition.Attack;
+		Defense = mDefinition.Defense;
 
-		Sprite.sprite = Definition.NormalSprite;
-		ColorSprite.sprite = Definition.NormalSpriteColor;
-		ColorSprite.color = ColorLib.Colors[Color].NormalColor;
+		Sprite.sprite = mDefinition.NormalSprite;
+		ColorSprite.sprite = mDefinition.NormalSpriteColor;
+		ColorSprite.color = mColorLib.Colors[Color].NormalColor;
+
+        GridSpace bottomRight = mCurrentSpace;
+        for (int i = 1; i < mDefinition.Width; ++i)
+            bottomRight = bottomRight.RightSpace;
+        for (int i = 1; i < mDefinition.Height; ++i)
+            bottomRight = bottomRight.BackSpace;
+
+        mOffset = (bottomRight.transform.position - mCurrentSpace.transform.position) * 0.5f;
+
+        transform.localPosition = offset + mOffset;
 	}
 
-	public bool CanCombine(Ship other)
+    public void UpdateLocation(GridSpace newSpace)
+    {
+        if (mCurrentSpace != null)
+        {
+            GridSpace xSpace = mCurrentSpace;
+            for (int x = 0; x < mDefinition.Width; ++x)
+            {
+                xSpace.Ship = null;
+                
+                GridSpace ySpace = xSpace.BackSpace;
+                for (int y = 1; y < mDefinition.Height; ++y)
+                {
+                    ySpace.Ship = this;
+                    ySpace = ySpace.BackSpace;
+                }
+
+                xSpace = xSpace.RightSpace;
+            }
+        }
+        mCurrentSpace = newSpace;
+        transform.SetParent(mCurrentSpace.transform, true);
+        if (mCurrentSpace != null)
+        {
+            GridSpace xSpace = mCurrentSpace;
+            for (int x = 0; x < mDefinition.Width; ++x)
+            {
+                xSpace.Ship = this;
+
+                GridSpace ySpace = xSpace.BackSpace;
+                for (int y = 1; y < mDefinition.Height; ++y)
+                {
+                    ySpace.Ship = this;
+                    ySpace = ySpace.BackSpace;
+                }
+
+                xSpace = xSpace.RightSpace;
+            }
+        }
+    }
+
+    public bool CanCombine(Ship other)
 	{
-		if (State == ShipState.Empty) return false;
 		//color, multipler, ship type, and state must match
-		bool sameType = other.Definition == Definition && other.Color == Color;
-		bool sameState = other.State == State;
+		bool sameType = other.mDefinition == mDefinition && other.Color == Color;
+		bool sameState = other.mState == mState;
 		if(!sameType || !sameState) return false;
 		if(other.Multiplier == Multiplier)
 		{
@@ -105,20 +163,20 @@ public class Ship : MonoBehaviour
 
 	public void SetAttacking()
 	{
-		if (State != ShipState.Attacking)
+		if (mState != ShipState.Attacking)
 		{
-			AttackTurns = Definition.AttackTurns;
+			AttackTurns = mDefinition.AttackTurns;
 		}
 
 		++Multiplier;
 
-		Attack = Definition.Attack * Multiplier;
-		Defense = Mathf.CeilToInt(Definition.Defense * 0.5f) * Multiplier;
+		Attack = mDefinition.Attack * Multiplier;
+		Defense = Mathf.CeilToInt(mDefinition.Defense * 0.5f) * Multiplier;
 
-		State = ShipState.Attacking;
-		Sprite.sprite = Definition.AttackingSprite;
-		ColorSprite.sprite = Definition.AttackingSpriteColor;
-		ColorSprite.color = ColorLib.Colors[Color].AttackLevels[Multiplier];
+		mState = ShipState.Attacking;
+		Sprite.sprite = mDefinition.AttackingSprite;
+		ColorSprite.sprite = mDefinition.AttackingSpriteColor;
+		ColorSprite.color = mColorLib.Colors[Color].AttackLevels[Multiplier];
 		Animator.SetBool("Attacking", true);
 	}
 
@@ -130,12 +188,12 @@ public class Ship : MonoBehaviour
 		++Multiplier;
 		
 		Attack = 0;
-		Defense = Definition.Defense * Multiplier;
+		Defense = mDefinition.Defense * Multiplier;
 
-		State = ShipState.Defending;
-		Sprite.sprite = Definition.DefendingSprite;
-		ColorSprite.sprite = Definition.DefendingSpriteColor;
-		ColorSprite.color = ColorLib.Colors[Color].DefneseLevels[Multiplier];
+		mState = ShipState.Defending;
+		Sprite.sprite = mDefinition.DefendingSprite;
+		ColorSprite.sprite = mDefinition.DefendingSpriteColor;
+		ColorSprite.color = mColorLib.Colors[Color].DefneseLevels[Multiplier];
 		Animator.SetBool("Attacking", true);
 	}
 }

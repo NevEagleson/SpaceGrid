@@ -7,7 +7,12 @@ public class GridSpace : MonoBehaviour
 	public Ship Ship;
 	public GameObject Box;
 	public GameObject Selection;
-	public bool Occupied { get; set; }
+    public bool Occupied { get { return Ship != null; } }
+
+    public GridSpace ForwardSpace { get; set; }
+    public GridSpace BackSpace { get; set; }
+    public GridSpace LeftSpace { get; set; }
+    public GridSpace RightSpace { get; set; }
 
 	void OnEnable()
 	{
