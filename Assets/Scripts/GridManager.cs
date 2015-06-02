@@ -57,8 +57,8 @@ public class GridManager : MonoBehaviour
         {
             for (int x = 0; x < Columns; ++x)
             {
-                mGrid[x, y].ForwardSpace = y > 0 ? mGrid[x, y - 1] : null;
-                mGrid[x, y].BackSpace = y < Rows - 1 ? mGrid[x, y + 1] : null;
+                mGrid[x, y].BackSpace = y > 0 ? mGrid[x, y - 1] : null;
+                mGrid[x, y].ForwardSpace = y < Rows - 1 ? mGrid[x, y + 1] : null;
                 mGrid[x, y].LeftSpace = x > 0 ? mGrid[x - 1, y] : null;
                 mGrid[x, y].RightSpace = x < Columns - 1 ? mGrid[x + 1, y] : null;                
             }
@@ -106,6 +106,24 @@ public class GridManager : MonoBehaviour
 		GameContext.Instance.GameState.SetTrigger("spawningDone");
 	}
 
+    public void GetGridLocation(GridSpace space, out int x, out int y)
+    {
+        x = 0;
+        y = 0;
+        for (int i = 0; i < Columns; ++i)
+        {
+            for (int j = 0; j < Rows; ++j)
+            {
+                if (mGrid[i, j] == space)
+                {
+                    x = i;
+                    y = j;
+                    return;
+                }
+            }
+        }
+    }
+
 	public bool GridVisible
 	{
 		get { return mGridVisible; }
@@ -128,9 +146,31 @@ public class GridManager : MonoBehaviour
 		{
 			for (int y = 0; y < Rows; ++y)
 			{
-				if (space != mGrid[x, y])
-					mGrid[x, y].Deselect();
+                if (space != mGrid[x, y])
+                    mGrid[x, y].Deselect();
 			}
 		}
 	}
+
+    public void HighlightBackRow(GridSpace space)
+    {
+        for (int x = 0; x < Columns; ++x)
+        {
+            for (int y = 0; y < Rows; ++y)
+            {
+                if (mGrid[x, y].Occupied)
+                {
+                    if (mGrid[x, y].Ship != space.Ship && y > 0)
+                    {
+                        mGrid[x, y - 1].Highlight = true;
+                    }
+                    break;
+                }
+                if (y == Rows - 1)
+                {
+                    mGrid[x, y].Highlight = true;
+                }
+            }
+        }
+    }
 }

@@ -7,6 +7,7 @@ public class BeginTurnState : StateMachineBehaviour
 	// OnStateEnter is called when a transition starts and the state machine starts to evaluate this state
 	override public void OnStateEnter(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
 	{
+        GameContext.Instance.StatusText.text = "";
 		GameContext.Instance.Command.gameObject.SetActive(true);
 		GameContext.Instance.Command.Text = IsPlayer ? Constants.PlayersTurn : Constants.OpponentsTurn;
 	}

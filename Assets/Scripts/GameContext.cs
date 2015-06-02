@@ -1,5 +1,5 @@
 ﻿using UnityEngine;
-using System.Collections;
+using UnityEngine.UI;
 
 public class GameContext : MonoBehaviour 
 {
@@ -9,6 +9,7 @@ public class GameContext : MonoBehaviour
 	public GridManager Player;
 	public GridManager Opponent;
 	public Command Command;
+    public Text StatusText;
 
 
 	// Use this for initialization

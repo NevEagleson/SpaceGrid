@@ -12,6 +12,7 @@ GameObject:
   - 222: {fileID: 22279620}
   - 114: {fileID: 11434250}
   - 114: {fileID: 11400372}
+  - 95: {fileID: 9524664}
   m_Layer: 5
   m_Name: GridSpace
   m_TagString: Untagged
@@ -53,6 +54,23 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
+--- !u!95 &9524664
+Animator:
+  serializedVersion: 3
+  m_ObjectHideFlags: 1
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 100100000}
+  m_GameObject: {fileID: 125052}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: 5a3cda57d69fda64ba2a351a31245a20, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
 --- !u!114 &11400372
 MonoBehaviour:
   m_ObjectHideFlags: 1

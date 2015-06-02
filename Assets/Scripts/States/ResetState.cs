@@ -6,6 +6,8 @@ public class ResetState : StateMachineBehaviour
 	// OnStateEnter is called when a transition starts and the state machine starts to evaluate this state
 	override public void OnStateEnter(Animator animator, AnimatorStateInfo stateInfo, int layerIndex) 
 	{
+        GameContext.Instance.StatusText.text = "";
+        GameContext.Instance.Command.gameObject.SetActive(false);
 		GameContext.Instance.Player.Reset();
 		GameContext.Instance.Opponent.Reset();
 		animator.SetBool("playersTurn", Random.value > 0.5f);

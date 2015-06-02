@@ -32,8 +32,6 @@ public class Ship : MonoBehaviour
     private ColorLibrary mColorLib;
     //this is the top left space the ship occupies
     private GridSpace mCurrentSpace;
-    //offset of ship transform from gridspace
-    private Vector3 mOffset;
     //animation
     private bool mMoving;
     private bool Moving
@@ -41,6 +39,7 @@ public class Ship : MonoBehaviour
         get { return mMoving; }
         set
         {
+            if(mMoving == value) return;
             mMoving = value;
             Animator.SetBool("Moving", value);
         }
@@ -56,26 +55,17 @@ public class Ship : MonoBehaviour
 	{
         if (mDefinition == null || mCurrentSpace == null) return;
 
-        if (Moving)
+        if (transform.position != mCurrentSpace.transform.position)
         {
-            Vector3 deltaPos = mCurrentSpace.transform.position - transform.position - mOffset;
-            deltaPos.z = 0;
-            float sqrMoveDist = MoveSpeed * Time.deltaTime;
-            sqrMoveDist *= sqrMoveDist;
-            if (deltaPos.sqrMagnitude > sqrMoveDist)
-            {
-                deltaPos.Normalize();
-                deltaPos *= MoveSpeed * Time.deltaTime;
-                transform.Translate(deltaPos);
-            }
-            else
-            {
-                transform.position = mCurrentSpace.transform.position + mOffset;
-                Moving = false;
+            Moving = true;
+            transform.position = Vector3.MoveTowards(transform.position, mCurrentSpace.transform.position, MoveSpeed * Time.deltaTime);
+        }
+        else
+        {
+            Moving = false;
 
-                if (mState == ShipState.Combining)
-                    Destroy(gameObject);
-            }
+            if (mState == ShipState.Combining)
+                Destroy(gameObject);
         }
 	}
 
@@ -99,9 +89,10 @@ public class Ship : MonoBehaviour
         for (int i = 1; i < mDefinition.Height; ++i)
             bottomRight = bottomRight.BackSpace;
 
-        mOffset = (bottomRight.transform.position - mCurrentSpace.transform.position) * 0.5f;
+        Vector3 SpriteOffset = (bottomRight.transform.position - mCurrentSpace.transform.position) * 0.5f;
+        Animator.transform.localPosition = SpriteOffset;
 
-        transform.localPosition = offset + mOffset;
+        transform.localPosition = offset;
 	}
 
     public void UpdateLocation(GridSpace newSpace)
@@ -196,4 +187,24 @@ public class Ship : MonoBehaviour
 		ColorSprite.color = mColorLib.Colors[Color].DefneseLevels[Multiplier];
 		Animator.SetBool("Attacking", true);
 	}
+
+    public void Select()
+    {
+        int x, y; 
+        mCurrentSpace.Grid.GetGridLocation(mCurrentSpace, out x, out y);
+
+        GameContext.Instance.StatusText.text = string.Format("Grid X:{0} Y:{1}\nAttack:{2}\nDefense:{3}", x, y, Attack, Defense);
+        if (mCurrentSpace.Grid.GridVisible)
+        {
+            GridSpace behindSpace = mCurrentSpace;
+            for (int i = 0; i < mDefinition.Height && behindSpace != null; ++i)
+                behindSpace = behindSpace.BackSpace;
+            if (behindSpace == null || !behindSpace.Occupied)
+                mCurrentSpace.Grid.HighlightBackRow(mCurrentSpace);
+           
+            
+            if (mCurrentSpace.LeftSpace != null && mCurrentSpace.LeftSpace.Occupied) mCurrentSpace.LeftSpace.Highlight = true;
+            if (mCurrentSpace.RightSpace != null && mCurrentSpace.RightSpace.Occupied) mCurrentSpace.RightSpace.Highlight = true;
+        }
+    }
 }
