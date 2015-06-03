@@ -16,4 +16,5 @@ public class ShipDefinition : ScriptableObject
 	public int AttackTurns;
 	public bool CanAttack;
 	public bool CanDefend;
+	public bool CanRepawn;
 }

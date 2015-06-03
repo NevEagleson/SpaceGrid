@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
+using UnityEngine.EventSystems;
 
 public class Ship : MonoBehaviour 
 {
@@ -45,6 +46,12 @@ public class Ship : MonoBehaviour
         }
     }
 
+	public GridSpace GridSpace
+	{
+		get { return mCurrentSpace; }
+		set { UpdateLocation(value); }
+	}
+
     void OnEnable()
     {
         //because we spawn offscreen so need to move to space
@@ -54,6 +61,7 @@ public class Ship : MonoBehaviour
 	void Update()
 	{
         if (mDefinition == null || mCurrentSpace == null) return;
+		if (Draggable.CurrentDragging != null && Draggable.CurrentDragging.gameObject == gameObject) return;
 
         if (transform.position != mCurrentSpace.transform.position)
         {
@@ -102,22 +110,21 @@ public class Ship : MonoBehaviour
             GridSpace xSpace = mCurrentSpace;
             for (int x = 0; x < mDefinition.Width; ++x)
             {
-                xSpace.Ship = null;
-                
+				xSpace.Ship = null;
                 GridSpace ySpace = xSpace.BackSpace;
                 for (int y = 1; y < mDefinition.Height; ++y)
                 {
-                    ySpace.Ship = this;
+					ySpace.Ship = null;
                     ySpace = ySpace.BackSpace;
                 }
 
                 xSpace = xSpace.RightSpace;
             }
         }
-        mCurrentSpace = newSpace;
-        transform.SetParent(mCurrentSpace.transform, true);
+        mCurrentSpace = newSpace;  
         if (mCurrentSpace != null)
         {
+			transform.SetParent(mCurrentSpace.transform, true);
             GridSpace xSpace = mCurrentSpace;
             for (int x = 0; x < mDefinition.Width; ++x)
             {
@@ -207,4 +214,16 @@ public class Ship : MonoBehaviour
             if (mCurrentSpace.RightSpace != null && mCurrentSpace.RightSpace.Occupied) mCurrentSpace.RightSpace.Highlight = true;
         }
     }
+
+	public void BeginMove()
+	{
+		Sprite.sortingLayerName = "OverUI";
+		ColorSprite.sortingLayerName = "OverUI";
+	}
+
+	public void EndMove()
+	{
+		Sprite.sortingLayerName = "Default";
+		ColorSprite.sortingLayerName = "Default";
+	}
 }

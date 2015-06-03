@@ -21,15 +21,23 @@ public class GridManager : MonoBehaviour
 
 	[SerializeField]
 	private int TotalReinforcements;
+	[SerializeField]
+	private int ReinforcementsPerTurn;
 
 	public int Health { get; private set; }
 
-	public int Reinforcements { get; private set; }
+	private Queue<ShipDefinition> mReinforcementShips;
+	public int Reinforcements { get { return mReinforcementShips.Count; } }
 
 	public void Reset()
 	{
 		Health = StartingHealth;
-		Reinforcements = TotalReinforcements;
+
+		mReinforcementShips = new Queue<ShipDefinition>();
+		for (int i = 0; i < TotalReinforcements; ++i)
+		{
+			mReinforcementShips.Enqueue(ShipDefinition);
+		}
 
 		for (int i = 0; i < transform.childCount; ++i)
 			DestroyObject(transform.GetChild(i).gameObject);
@@ -69,7 +77,8 @@ public class GridManager : MonoBehaviour
 
 	private void _SpawnReinforcements()
 	{
-		while (Reinforcements > 0)
+		int ships2Spawn = ReinforcementsPerTurn;
+		while (ships2Spawn > 0 && mReinforcementShips.Count > 0)
 		{
 			//first check if we can spawn anything at all
 			bool canSpawn = false;
@@ -91,12 +100,17 @@ public class GridManager : MonoBehaviour
 
             GameObject so = Instantiate<GameObject>(ShipPrefab);
             so.transform.SetParent(transform, false);
-            so.GetComponent<Ship>().SetShip(ShipDefinition, ColorLib, Random.Range(0, 3), spawnSpace, SpawnOffset);
+            so.GetComponent<Ship>().SetShip(mReinforcementShips.Dequeue(), ColorLib, Random.Range(0, 3), spawnSpace, SpawnOffset);
 
 			mSpawnedShips.Add(spawnSpace.Ship);
 
-			--Reinforcements;
+			--ships2Spawn;
 		}
+	}
+
+	public void ReturnShip(ShipDefinition ship)
+	{
+		mReinforcementShips.Enqueue(ship);
 	}
 
 	public void SpawnReinforcements()
