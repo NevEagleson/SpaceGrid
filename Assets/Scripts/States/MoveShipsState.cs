@@ -1,12 +1,11 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public class EndTurnState : StateMachineBehaviour
+public class MoveShipsState : StateMachineBehaviour
 {
 	// OnStateEnter is called when a transition starts and the state machine starts to evaluate this state
 	override public void OnStateEnter(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
 	{
-		GameContext.Instance.PlayersTurn = !GameContext.Instance.PlayersTurn;
+		GameContext.Instance.CurrentPlayer.MoveShips();
 	}
-
 }

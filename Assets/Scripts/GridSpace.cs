@@ -144,6 +144,10 @@ public class GridSpace : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
 				if (previousShip != null) previousShip.GridSpace = previousSpace;
 
 				Select();
+
+				Grid.UseTurn();
+
+				GameContext.Instance.SetState(GameState.CheckMatches);
 			}
 
 			Highlight = false;

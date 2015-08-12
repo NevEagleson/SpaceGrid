@@ -1,5 +1,5 @@
 ﻿using UnityEngine;
-using System.Collections;
+using System.Collections.Generic;
 using UnityEngine.EventSystems;
 
 public class Ship : MonoBehaviour 
@@ -25,6 +25,8 @@ public class Ship : MonoBehaviour
     private SpriteRenderer ColorSprite;
     [SerializeField]
     private SpriteRenderer Sprite;
+	[SerializeField]
+	private SpriteRenderer PowerSprite;
     [SerializeField]
     private Animator Animator;
 	
@@ -45,6 +47,19 @@ public class Ship : MonoBehaviour
             Animator.SetBool("Moving", value);
         }
     }
+
+	public bool Idle
+	{
+		get { return mState == ShipState.Normal; }
+	}
+	public bool Attacking
+	{
+		get { return mState == ShipState.Attacking; }
+	}
+	public bool Defending
+	{
+		get { return mState == ShipState.Defending; }
+	}
 
 	public GridSpace GridSpace
 	{
@@ -84,12 +99,14 @@ public class Ship : MonoBehaviour
         UpdateLocation(space);
 		Color = color;
 
+		Multiplier = 0;
 		Attack = mDefinition.Attack;
 		Defense = mDefinition.Defense;
 
 		Sprite.sprite = mDefinition.NormalSprite;
 		ColorSprite.sprite = mDefinition.NormalSpriteColor;
-		ColorSprite.color = mColorLib.Colors[Color].NormalColor;
+		ColorSprite.color = mColorLib.Colors[Color].IdleColor;
+		PowerSprite.gameObject.SetActive(false);
 
         GridSpace bottomRight = mCurrentSpace;
         for (int i = 1; i < mDefinition.Width; ++i)
@@ -154,8 +171,8 @@ public class Ship : MonoBehaviour
 		}
 		else
 		{
-			//multiplers must be non zero - combine with the highest multiplier upto 3
-			return Multiplier > 0 && other.Multiplier > 0 && Multiplier > other.Multiplier && Multiplier < 3;
+			//multiplers must be non zero - combine with the highest multiplier upto max multiplier
+			return Multiplier > 0 && other.Multiplier > 0 && Multiplier > other.Multiplier && (Multiplier < Constants.MaxShipMultiplier || Defending);
 		}
 	}
 
@@ -165,21 +182,27 @@ public class Ship : MonoBehaviour
 		{
 			AttackTurns = mDefinition.AttackTurns;
 		}
+		mState = ShipState.Attacking;
 
 		++Multiplier;
 
 		Attack = mDefinition.Attack * Multiplier;
 		Defense = Mathf.CeilToInt(mDefinition.Defense * 0.5f) * Multiplier;
-
-		mState = ShipState.Attacking;
+		
 		Sprite.sprite = mDefinition.AttackingSprite;
 		ColorSprite.sprite = mDefinition.AttackingSpriteColor;
-		ColorSprite.color = mColorLib.Colors[Color].AttackLevels[Multiplier];
+		ColorSprite.color = mColorLib.Colors[Color].AttackColor;
+		PowerSprite.gameObject.SetActive(true);
+		PowerSprite.sprite = mDefinition.AttackingSpritePower;
+		PowerSprite.color = mColorLib.Colors[Color].AttackLevels[Multiplier];
+
 		Animator.SetBool("Attacking", true);
 	}
 
 	public void SetDefending()
 	{
+		mState = ShipState.Defending;
+
 		//all defending ships are same color
 		Color = 0;
 
@@ -188,11 +211,58 @@ public class Ship : MonoBehaviour
 		Attack = 0;
 		Defense = mDefinition.Defense * Multiplier;
 
-		mState = ShipState.Defending;
+		
 		Sprite.sprite = mDefinition.DefendingSprite;
 		ColorSprite.sprite = mDefinition.DefendingSpriteColor;
-		ColorSprite.color = mColorLib.Colors[Color].DefneseLevels[Multiplier];
-		Animator.SetBool("Attacking", true);
+		ColorSprite.color = mColorLib.DefenseColor;
+		PowerSprite.gameObject.SetActive(true);
+		PowerSprite.sprite = mDefinition.DefendingSpritePower;
+		PowerSprite.color = mColorLib.DefenseLevels[Multiplier];
+
+		Animator.SetBool("Defending", true);
+	}
+
+	public void SetCombining(GridSpace space)
+	{
+		mCurrentSpace.Ship = null;
+		mCurrentSpace = space;
+		mState = ShipState.Combining;
+		GridSpace.Grid.ReturnShip(mDefinition);
+	}
+
+	public void CombineDefenseShips(List<GridSpace> match)
+	{
+		int combinedMultiplier = 0;
+		foreach (GridSpace space in match)
+		{
+			combinedMultiplier += space.Ship.Multiplier;
+			if (space.Ship != this)
+			{
+				space.Ship.SetCombining(GridSpace);
+			}
+		}
+		//Set multiplier to combined value - 1, because SetDefending increments it
+		Multiplier = Mathf.Clamp(combinedMultiplier, 1, Constants.MaxShipMultiplier) - 1;
+		SetDefending();
+	}
+
+	public void CombineAttackShips(List<GridSpace> match)
+	{
+		int combinedMultiplier = 0;
+		foreach (GridSpace space in match)
+		{
+			if (!space.Ship.Defending)
+			{
+				combinedMultiplier += space.Ship.Multiplier;
+				if (space.Ship != this)
+				{
+					space.Ship.SetCombining(GridSpace);
+				}
+			}
+		}
+		//Set multiplier to combined value - 1, because SetAttacking increments it
+		Multiplier = Mathf.Clamp(combinedMultiplier, 1, Constants.MaxShipMultiplier) - 1;
+		SetAttacking();
 	}
 
     public void Select()
@@ -219,11 +289,13 @@ public class Ship : MonoBehaviour
 	{
 		Sprite.sortingLayerName = "OverUI";
 		ColorSprite.sortingLayerName = "OverUI";
+		PowerSprite.sortingLayerName = "OverUI";
 	}
 
 	public void EndMove()
 	{
 		Sprite.sortingLayerName = "Default";
 		ColorSprite.sortingLayerName = "Default";
+		PowerSprite.sortingLayerName = "Default";
 	}
 }

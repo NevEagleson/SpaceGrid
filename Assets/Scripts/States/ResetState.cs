@@ -10,7 +10,7 @@ public class ResetState : StateMachineBehaviour
         GameContext.Instance.Command.gameObject.SetActive(false);
 		GameContext.Instance.Player.Reset();
 		GameContext.Instance.Opponent.Reset();
-		animator.SetBool("playersTurn", Random.value > 0.5f);
+		GameContext.Instance.PlayersTurn =  Random.value > 0.5f;
 	}
 
 	/*
